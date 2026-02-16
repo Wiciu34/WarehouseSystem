@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using WarehouseSystem.Interfaces;
 using WarehouseSystem.Models;
 using WarehouseSystem.Services;
 using WarehouseSystem.Validators;
@@ -11,6 +11,7 @@ namespace WarehouseSystem.Tests
         private DiscountService _discountService;
         private InvoiceService _invoiceService;
         private ShippingService _shippingService;
+        private TaxService _taxService;
 
         [SetUp]
         public void setup()
@@ -19,6 +20,7 @@ namespace WarehouseSystem.Tests
             _discountService = new DiscountService();
             _invoiceService = new InvoiceService();
             _shippingService = new ShippingService();
+            _taxService = new TaxService();
         }
         //TC_011 Scenariusz: Weryfikacja zakończona negatywnie przez zbyt młody wiek
         //Dane: Klient: Imię: Jan Kowalski, Email: "jan.kowalski@test.pl", wiek:  17
@@ -230,6 +232,23 @@ namespace WarehouseSystem.Tests
             decimal cost = _shippingService.CalculateShippingCost(2, "Germany");
 
             Assert.That(cost, Is.EqualTo(15.00m));
+        }
+
+        //TC_022 Scenariusz: Obliczenie podatku dla standardowej stawki VAT (23%)
+        //Dane: Kwota 100.00, stawka podatku 0.23.
+        //Akcja: _taxService.CalculateTax(amount, taxRate)
+        //Oczekiwany wynik: Kwota podatku równa 23.00.
+
+        [Test]
+        public void TaxService_should_calculate_standard_tax_correctly()
+        {
+            var taxService = new TaxService();
+            decimal amount = 100.00m;
+            decimal taxRate = 0.23m;
+
+            var result = taxService.CalculateTax(amount, taxRate);
+
+            Assert.That(result, Is.EqualTo(23.00m));
         }
     }
 }

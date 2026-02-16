@@ -2,7 +2,7 @@
 
 namespace WarehouseSystem.Services
 {
-    internal class TaxService : ITaxService
+    public class TaxService : ITaxService
     {
         public decimal CalculateTax(decimal amount, decimal taxRate)
         {
