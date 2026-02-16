@@ -6,10 +6,13 @@ namespace WarehouseSystem
     public class PaymentManager
     {
         private readonly IPaymentGateway _paymentGateway;
+        private readonly IShippingService _shippingService;
 
-        public PaymentManager(IPaymentGateway paymentGateway)
+        public PaymentManager(IPaymentGateway paymentGateway, IShippingService shippingService)
         {
             _paymentGateway = paymentGateway;
+            _shippingService = shippingService;
+
         }
 
         public bool PayForOrder(Order order, string creditCardNumber)
@@ -28,6 +31,7 @@ namespace WarehouseSystem
             if (success)
             {
                 order.IsPaid = true;
+                _shippingService.GenerateShippingLabel(order);
                 return true;
             }
             else

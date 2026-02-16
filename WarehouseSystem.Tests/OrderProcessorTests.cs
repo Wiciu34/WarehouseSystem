@@ -13,6 +13,7 @@ namespace WarehouseSystem.Tests
         private Mock<ITaxService> _mockTax;
         private Mock<IOrderRepository> _mockRepo;
         private Mock<INotificationService> _mockNotification;
+        private Mock<IShippingService> _mockShipping;
 
         private OrderProcessor _processor;
 
@@ -26,6 +27,7 @@ namespace WarehouseSystem.Tests
             _mockTax = new Mock<ITaxService>();
             _mockRepo = new Mock<IOrderRepository>();
             _mockNotification = new Mock<INotificationService>();
+            _mockShipping = new Mock<IShippingService>();
 
             _processor = new OrderProcessor(
                 _mockValidator.Object,
@@ -34,7 +36,8 @@ namespace WarehouseSystem.Tests
                 _mockDiscount.Object,
                 _mockTax.Object,
                 _mockRepo.Object,
-                _mockNotification.Object
+                _mockNotification.Object,
+                _mockShipping.Object
             );
         }
 
@@ -55,6 +58,7 @@ namespace WarehouseSystem.Tests
         public void ProcessOrder_should_process_correctly_when_data_is_valid()
         {
             var customer = new Customer { Name = "Test User", Email = "test@test.com", Age = 25 };
+            var shippingDetails = new ShippingDetails { TotalWeight = 5, DestinationCountry = "Germany" };
             var items = new List<OrderItem> 
             { 
                 new OrderItem 
@@ -75,7 +79,7 @@ namespace WarehouseSystem.Tests
             _mockDiscount.Setup(x => x.ApplyDiscount(customer, 100m)).Returns(100m);//No discount
             _mockTax.Setup(x => x.CalculateTax(100m, It.IsAny<decimal>())).Returns(23m); //Tax 23
 
-            var result = _processor.ProcessOrder(customer, items);
+            var result = _processor.ProcessOrder(customer, items, shippingDetails);
 
             Assert.IsNotNull(result, "Order should be created");
             Assert.That(result.TotalAmount, Is.EqualTo(123m), "Total amount should be eaqule to 123");
@@ -100,6 +104,7 @@ namespace WarehouseSystem.Tests
         public void ProcessOrder_should_throw_expection_when_customer_is_invalid()
         {
             var customer = new Customer { Name = "", Email = "test@test.com", Age = 25 };
+            var shippingDetails = new ShippingDetails { TotalWeight = 5, DestinationCountry = "Germany" };
             var items = new List<OrderItem>
             {
                 new OrderItem
@@ -121,7 +126,7 @@ namespace WarehouseSystem.Tests
             _mockTax.Setup(x => x.CalculateTax(100m, It.IsAny<decimal>())).Returns(23m); //Tax 23
 
             var expection = Assert.Throws<ArgumentException>(() =>
-                _processor.ProcessOrder(customer, items)
+                _processor.ProcessOrder(customer, items, shippingDetails)
             );
 
             Assert.That(expection.Message, Is.EqualTo("Invalid customer."));
@@ -145,6 +150,7 @@ namespace WarehouseSystem.Tests
         public void ProcessOrder_should_throw_expection_when_product_is_not_available()
         {
             var customer = new Customer { Name = "Jan Kowalski", Email = "test@test.com", Age = 25 };
+            var shippingDetails = new ShippingDetails { TotalWeight = 5, DestinationCountry = "Germany" };
             var items = new List<OrderItem>
             {
                 new OrderItem
@@ -166,7 +172,7 @@ namespace WarehouseSystem.Tests
             _mockTax.Setup(x => x.CalculateTax(100m, It.IsAny<decimal>())).Returns(23m); //Tax 23
 
             var expection = Assert.Throws<InvalidOperationException>(() =>
-                _processor.ProcessOrder(customer, items)
+                _processor.ProcessOrder(customer, items, shippingDetails)
             );
 
             Assert.That(expection.Message, Is.EqualTo($"Product {items[0].Product.Name} is out of stock."));
@@ -190,6 +196,7 @@ namespace WarehouseSystem.Tests
         public void ProcessOrder_should_not_send_email_when_database_throws_exception()
         {
             var customer = new Customer { Name = "Test User", Email = "test@test.com", Age = 25 };
+            var shippingDetails = new ShippingDetails { TotalWeight = 5, DestinationCountry = "Germany" };
             var items = new List<OrderItem> { new OrderItem { Quantity = 1, Product = new Product { Id = 1, BasePrice = 100m } } };
 
             _mockValidator.Setup(x => x.Validate(customer)).Returns(true);
@@ -198,7 +205,7 @@ namespace WarehouseSystem.Tests
             // Symulujemy awariê bazy danych!
             _mockRepo.Setup(x => x.Save(It.IsAny<Order>())).Throws(new Exception("Database connection lost"));
 
-            Assert.Throws<Exception>(() => _processor.ProcessOrder(customer, items));
+            Assert.Throws<Exception>(() => _processor.ProcessOrder(customer, items, shippingDetails));
 
             _mockNotification.Verify(x => x.SendOrderConfirmation(It.IsAny<Customer>(), It.IsAny<Order>()), Times.Never);
         }
@@ -218,6 +225,7 @@ namespace WarehouseSystem.Tests
         public void ProcessOrder_should_calculate_tax_based_on_discounted_amount()
         {
             var customer = new Customer { Name = "VIP", Age = 30, IsVip = true};
+            var shippingDetails = new ShippingDetails { TotalWeight = 5, DestinationCountry = "Germany" };
             var items = new List<OrderItem> { new OrderItem { Quantity = 1, Product = new Product { Id = 1 } } };
 
             _mockValidator.Setup(x => x.Validate(customer)).Returns(true);
@@ -225,7 +233,7 @@ namespace WarehouseSystem.Tests
             _mockPricing.Setup(x => x.CalculateSubtotal(items)).Returns(100m);
             _mockDiscount.Setup(x => x.ApplyDiscount(customer, 100m)).Returns(80m);
 
-            _processor.ProcessOrder(customer, items);
+            _processor.ProcessOrder(customer, items, shippingDetails);
 
             _mockTax.Verify(x => x.CalculateTax(80m, It.IsAny<decimal>()), Times.Once);
         }

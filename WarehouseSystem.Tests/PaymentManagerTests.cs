@@ -7,13 +7,15 @@ namespace WarehouseSystem.Tests
     public class PaymentManagerTests
     {
         private Mock<IPaymentGateway> _paymentGatewayMock;
+        private Mock<IShippingService> _shippingServiceMock;
         private PaymentManager _paymentManager;
 
         [SetUp]
         public void Setup()
         {
             _paymentGatewayMock = new Mock<IPaymentGateway>();
-            _paymentManager = new PaymentManager(_paymentGatewayMock.Object);
+            _shippingServiceMock = new Mock<IShippingService>();
+            _paymentManager = new PaymentManager(_paymentGatewayMock.Object, _shippingServiceMock.Object);
         }
 
 
@@ -51,6 +53,7 @@ namespace WarehouseSystem.Tests
 
             Assert.IsTrue(result);
             Assert.IsTrue(order.IsPaid);
+            _shippingServiceMock.Verify(x => x.GenerateShippingLabel(order), Times.Once);
         }
 
         //TC_007 Scenariusz: Odmowa banku(Brak środków)
@@ -87,6 +90,7 @@ namespace WarehouseSystem.Tests
 
             Assert.IsFalse(result);
             Assert.IsFalse(order.IsPaid);
+            _shippingServiceMock.Verify(x => x.GenerateShippingLabel(order), Times.Never);
         }
 
         //TC_008 Scenariusz: Próba płatności skradzioną/nieważną kartą
@@ -123,6 +127,7 @@ namespace WarehouseSystem.Tests
             Assert.IsFalse(result);
             
             _paymentGatewayMock.Verify(x => x.ProcessPayment(order.paymentDetails.CreditCardNumber, order.TotalAmount), Times.Never);
+            _shippingServiceMock.Verify(x => x.GenerateShippingLabel(order), Times.Never);
         }
     }
 }

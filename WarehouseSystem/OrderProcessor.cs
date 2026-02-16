@@ -17,6 +17,7 @@ namespace WarehouseSystem
         private readonly ITaxService _taxService;
         private readonly IOrderRepository _orderRepository;
         private readonly INotificationService _notificationService;
+        private readonly IShippingService _shippingService;
 
         public OrderProcessor(
            ICustomerValidator customerValidator,
@@ -25,7 +26,8 @@ namespace WarehouseSystem
            IDiscountService discountService,
            ITaxService taxService,
            IOrderRepository orderRepository,
-           INotificationService notificationService)
+           INotificationService notificationService,
+           IShippingService shippingService)
         {
             _customerValidator = customerValidator;
             _inventoryService = inventoryService;
@@ -34,8 +36,10 @@ namespace WarehouseSystem
             _taxService = taxService;
             _orderRepository = orderRepository;
             _notificationService = notificationService;
+            _shippingService = shippingService;
+
         }
-        public Order ProcessOrder(Customer customer, List<OrderItem> items)
+        public Order ProcessOrder(Customer customer, List<OrderItem> items, ShippingDetails shippingDetails)
         {
             if (!_customerValidator.Validate(customer))
             {
@@ -53,7 +57,8 @@ namespace WarehouseSystem
             decimal subtotal = _pricingService.CalculateSubtotal(items);
             decimal afterDiscount = _discountService.ApplyDiscount(customer, subtotal);
             decimal tax = _taxService.CalculateTax(afterDiscount, 0.23m);
-            decimal total = afterDiscount + tax;
+            decimal shippingCost = _shippingService.CalculateShippingCost(shippingDetails.TotalWeight, shippingDetails.DestinationCountry);
+            decimal total = afterDiscount + tax + shippingCost;
 
             var order = new Order
             {
