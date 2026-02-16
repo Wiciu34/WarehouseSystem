@@ -1,4 +1,5 @@
-﻿using WarehouseSystem.Models;
+﻿using System.IO;
+using WarehouseSystem.Models;
 using WarehouseSystem.Services;
 using WarehouseSystem.Validators;
 
@@ -9,6 +10,7 @@ namespace WarehouseSystem.Tests
         private CustomerValidator _validator;
         private DiscountService _discountService;
         private InvoiceService _invoiceService;
+        private ShippingService _shippingService;
 
         [SetUp]
         public void setup()
@@ -16,6 +18,7 @@ namespace WarehouseSystem.Tests
             _validator = new CustomerValidator();
             _discountService = new DiscountService();
             _invoiceService = new InvoiceService();
+            _shippingService = new ShippingService();
         }
         //TC_011 Scenariusz: Weryfikacja zakończona negatywnie przez zbyt młody wiek
         //Dane: Klient: Imię: Jan Kowalski, Email: "jan.kowalski@test.pl", wiek:  17
@@ -188,6 +191,45 @@ namespace WarehouseSystem.Tests
             var result = _invoiceService.GenerateInvoice(order);
 
             Assert.That(result.InvoiceNumber, Is.EqualTo("INV-2026-123"));
+        }
+
+        //TC_019 Scenariusz: Standardowa przesyłka krajowa
+        //Dane: Waga 5 kg, Kraj "Poland"
+        //Akcja: CalculateShippingCost(5, "Poland")
+        //Oczekiwany wynik: 10.00.
+
+        [Test]
+        public void CalculateCost_should_apply_discount_for_poland()
+        {
+            decimal cost = _shippingService.CalculateShippingCost(5, "Poland");
+
+            Assert.That(cost, Is.EqualTo(10.00m));
+        }
+
+        //TC_020 Scenariusz: Ciężka przesyłka zagraniczna(USA)
+        //Dane: Waga 15 kg, Kraj "USA".
+        //Akcja: CalculateShippingCost(15, "USA")
+        //Oczekiwany wynik: 45.00 (15 + 20 + 10).
+
+        [Test]
+        public void CalculateCost_should_add_fees_for_heavy_usa_package()
+        {
+            decimal cost = _shippingService.CalculateShippingCost(15, "USA");
+
+            Assert.That(cost, Is.EqualTo(45.00m));
+        }
+
+        //TC_021 Scenariusz: Przesyłka do innego kraju(Europa)
+        //Dane: Waga 2 kg, Kraj "Germany".
+        //Akcja: CalculateShippingCost(2, "Germany")
+        //Oczekiwany wynik: 15.00 (Cena bazowa).
+
+        [Test]
+        public void CalculateCost_should_return_base_price_for_standard_eu_package()
+        {
+            decimal cost = _shippingService.CalculateShippingCost(2, "Germany");
+
+            Assert.That(cost, Is.EqualTo(15.00m));
         }
     }
 }
