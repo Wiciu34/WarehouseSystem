@@ -1,0 +1,46 @@
+name: .NET Core CI with Coverage
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Pobranie kodu
+      uses: actions/checkout@v4
+      
+    - name: Konfiguracja środowiska .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x' # Dostosuj do swojej wersji, np. 7.0.x
+
+    - name: Przywracanie zależności (Restore)
+      run: dotnet restore
+
+    - name: Budowanie projektu (Build)
+      run: dotnet build --no-restore
+
+    - name: Uruchomienie testów i zbieranie pokrycia (Coverage)
+      # Dodaliśmy flagę --collect:"XPlat Code Coverage", która generuje plik XML z wynikami
+      run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+    - name: Generowanie podsumowania Code Coverage
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: coverage/**/coverage.cobertura.xml
+        badge: true
+        fail_below_min: false # Ustaw na true, jeśli chcesz, by pipeline "wybuchał", gdy masz mniej niż 80%
+        format: markdown
+        hide_branch_rate: false
+        hide_complexity: true
+        indicators: true
+        output: both
+        thresholds: '60 80'
+
+    - name: Wyświetlenie raportu w GitHub Actions
+      run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
